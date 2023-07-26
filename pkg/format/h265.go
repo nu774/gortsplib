@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/pion/rtp"
@@ -44,21 +45,21 @@ func (t *H265) unmarshal(payloadType uint8, clock string, codec string, rtpmap s
 		switch key {
 		case "sprop-vps":
 			var err error
-			t.VPS, err = base64.StdEncoding.DecodeString(val)
+			t.VPS, err = base64.StdEncoding.DecodeString(strings.Split(val, ",")[0])
 			if err != nil {
 				return fmt.Errorf("invalid sprop-vps (%v)", fmtp)
 			}
 
 		case "sprop-sps":
 			var err error
-			t.SPS, err = base64.StdEncoding.DecodeString(val)
+			t.SPS, err = base64.StdEncoding.DecodeString(strings.Split(val, ",")[0])
 			if err != nil {
 				return fmt.Errorf("invalid sprop-sps (%v)", fmtp)
 			}
 
 		case "sprop-pps":
 			var err error
-			t.PPS, err = base64.StdEncoding.DecodeString(val)
+			t.PPS, err = base64.StdEncoding.DecodeString(strings.Split(val, ",")[0])
 			if err != nil {
 				return fmt.Errorf("invalid sprop-pps (%v)", fmtp)
 			}

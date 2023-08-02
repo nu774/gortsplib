@@ -52,11 +52,12 @@ func (r *RingBuffer) Reset() {
 
 // Push pushes data at the end of the buffer.
 func (r *RingBuffer) Push(data interface{}) bool {
-	writeIndex := atomic.AddUint64(&r.writeIndex, 1)
+	writeIndex := atomic.LoadUint64(&r.writeIndex) + 1
 	i := writeIndex % r.size
 	if !atomic.CompareAndSwapPointer(&r.buffer[i], nil, unsafe.Pointer(&data)) {
 		return false
 	}
+	atomic.StoreUint64(&r.writeIndex, writeIndex)
 	r.event.signal()
 	return true
 }

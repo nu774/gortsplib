@@ -93,15 +93,15 @@ func (h *serverMulticastWriter) runWriter() {
 	}
 }
 
-func (h *serverMulticastWriter) writePacketRTP(payload []byte) {
-	h.writeBuffer.Push(typeAndPayload{
+func (h *serverMulticastWriter) writePacketRTP(payload []byte) bool {
+	return h.writeBuffer.Push(typeAndPayload{
 		isRTP:   true,
 		payload: payload,
 	})
 }
 
-func (h *serverMulticastWriter) writePacketRTCP(payload []byte) {
-	h.writeBuffer.Push(typeAndPayload{
+func (h *serverMulticastWriter) writePacketRTCP(payload []byte) bool {
+	return h.writeBuffer.Push(typeAndPayload{
 		isRTP:   false,
 		payload: payload,
 	})

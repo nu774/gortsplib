@@ -1,6 +1,7 @@
 package gortsplib
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -84,7 +85,10 @@ func (sm *serverStreamMedia) WritePacketRTPWithNTP(ss *ServerStream, pkt *rtp.Pa
 	for r := range ss.activeUnicastReaders {
 		sm, ok := r.setuppedMedias[sm.media]
 		if ok {
-			sm.writePacketRTP(byts)
+			if !sm.writePacketRTP(byts) {
+				onWarning(sm.ss, fmt.Errorf("RTP: writer queue is full, pkt dropped: ssrc=%d pt=%d seq=%d ts=%d",
+					pkt.SSRC, pkt.PayloadType, pkt.SequenceNumber, pkt.Timestamp))
+			}
 		}
 	}
 
@@ -104,7 +108,9 @@ func (sm *serverStreamMedia) writePacketRTCP(ss *ServerStream, pkt rtcp.Packet) 
 	for r := range ss.activeUnicastReaders {
 		sm, ok := r.setuppedMedias[sm.media]
 		if ok {
-			sm.writePacketRTCP(byts)
+			if !sm.writePacketRTCP(byts) {
+				onWarning(sm.ss, fmt.Errorf("RTCP: writer queue is full, pkt dropped"))
+			}
 		}
 	}
 

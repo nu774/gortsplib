@@ -44,6 +44,6 @@ func (w *writer) run() {
 	}
 }
 
-func (w *writer) queue(cb func()) {
-	w.buffer.Push(cb)
+func (w *writer) queue(cb func()) bool {
+	return w.buffer.Push(cb)
 }

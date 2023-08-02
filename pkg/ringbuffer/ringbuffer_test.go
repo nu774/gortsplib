@@ -75,6 +75,18 @@ func TestClose(t *testing.T) {
 	require.Equal(t, true, ok)
 }
 
+func TestFull(t *testing.T) {
+	r, err := New(64)
+	require.NoError(t, err)
+	for i := 0; i < 128; i++ {
+		require.Equal(t, r.Push(i), true)
+		if i&1 == 0 {
+			r.Pull()
+		}
+	}
+	require.Equal(t, r.Push(0), false)
+}
+
 func BenchmarkPushPullContinuous(b *testing.B) {
 	r, _ := New(1024 * 8)
 	defer r.Close()

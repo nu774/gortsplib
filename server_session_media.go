@@ -137,14 +137,14 @@ func (sm *serverSessionMedia) writePacketRTCPInQueueTCP(payload []byte) {
 	sm.ss.tcpConn.conn.WriteInterleavedFrame(sm.tcpRTCPFrame, sm.tcpBuffer)
 }
 
-func (sm *serverSessionMedia) writePacketRTP(payload []byte) bool {
-	return sm.ss.writer.queue(func() {
+func (sm *serverSessionMedia) writePacketRTP(payload []byte) {
+	sm.ss.writer.queue(func() {
 		sm.writePacketRTPInQueue(payload)
 	})
 }
 
-func (sm *serverSessionMedia) writePacketRTCP(payload []byte) bool {
-	return sm.ss.writer.queue(func() {
+func (sm *serverSessionMedia) writePacketRTCP(payload []byte) {
+	sm.ss.writer.queue(func() {
 		sm.writePacketRTCPInQueue(payload)
 	})
 }

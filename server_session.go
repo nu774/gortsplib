@@ -849,7 +849,7 @@ func (ss *ServerSession) handleRequest(sc *ServerConn, req *base.Request) (*base
 
 		if res.StatusCode != base.StatusOK {
 			if ss.state != ServerSessionStatePlay {
-				ss.writer.buffer = nil
+				ss.writer.stop()
 			}
 			return res, err
 		}
@@ -946,7 +946,7 @@ func (ss *ServerSession) handleRequest(sc *ServerConn, req *base.Request) (*base
 		})
 
 		if res.StatusCode != base.StatusOK {
-			ss.writer.buffer = nil
+			ss.writer.stop()
 			return res, err
 		}
 

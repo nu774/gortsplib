@@ -1,49 +1,40 @@
 package gortsplib
 
 import (
-	"github.com/aler9/gortsplib/v2/pkg/ringbuffer"
+	"sync/atomic"
+
+	"github.com/smallnest/chanx"
 )
 
 // this struct contains a queue that allows to detach the routine that is reading a stream
 // from the routine that is writing a stream.
 type writer struct {
-	running bool
-	buffer  *ringbuffer.RingBuffer
-
-	done chan struct{}
+	running atomic.Bool
+	ubc     *chanx.UnboundedChan[func()]
 }
 
 func (w *writer) allocateBuffer(size int) {
-	w.buffer, _ = ringbuffer.New(uint64(size))
+	w.ubc = chanx.NewUnboundedChan[func()](size)
 }
 
 func (w *writer) start() {
-	w.running = true
-	w.done = make(chan struct{})
-	go w.run()
+	if w.running.CompareAndSwap(false, true) {
+		go w.run()
+	}
 }
 
 func (w *writer) stop() {
-	if w.running {
-		w.buffer.Close()
-		<-w.done
-		w.running = false
+	if w.running.CompareAndSwap(true, false) {
+		close(w.ubc.In)
 	}
 }
 
 func (w *writer) run() {
-	defer close(w.done)
-
-	for {
-		tmp, ok := w.buffer.Pull()
-		if !ok {
-			return
-		}
-
-		tmp.(func())()
+	for fn := range w.ubc.Out {
+		fn()
 	}
 }
 
-func (w *writer) queue(cb func()) bool {
-	return w.buffer.Push(cb)
+func (w *writer) queue(cb func()) {
+	w.ubc.In <- cb
 }

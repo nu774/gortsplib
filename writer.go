@@ -1,7 +1,7 @@
 package gortsplib
 
 import (
-	"sync/atomic"
+	"sync"
 
 	"github.com/smallnest/chanx"
 )
@@ -9,7 +9,8 @@ import (
 // this struct contains a queue that allows to detach the routine that is reading a stream
 // from the routine that is writing a stream.
 type writer struct {
-	running atomic.Bool
+	running bool
+	mu      sync.Mutex
 	ubc     *chanx.UnboundedChan[func()]
 }
 
@@ -18,13 +19,19 @@ func (w *writer) allocateBuffer(size int) {
 }
 
 func (w *writer) start() {
-	if w.running.CompareAndSwap(false, true) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if !w.running {
+		w.running = true
 		go w.run()
 	}
 }
 
 func (w *writer) stop() {
-	if w.running.CompareAndSwap(true, false) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.running {
+		w.running = false
 		close(w.ubc.In)
 	}
 }
@@ -36,5 +43,9 @@ func (w *writer) run() {
 }
 
 func (w *writer) queue(cb func()) {
-	w.ubc.In <- cb
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.running {
+		w.ubc.In <- cb
+	}
 }

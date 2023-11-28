@@ -10,6 +10,7 @@ import (
 // from the routine that is writing a stream.
 type writer struct {
 	running bool
+	closed  bool
 	mu      sync.Mutex
 	ubc     *chanx.UnboundedChan[func()]
 }
@@ -30,8 +31,9 @@ func (w *writer) start() {
 func (w *writer) stop() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if w.running {
+	if !w.closed {
 		w.running = false
+		w.closed = true
 		close(w.ubc.In)
 	}
 }
@@ -45,7 +47,7 @@ func (w *writer) run() {
 func (w *writer) queue(cb func()) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if w.running {
+	if !w.closed {
 		w.ubc.In <- cb
 	}
 }

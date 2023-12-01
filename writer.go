@@ -28,18 +28,16 @@ func (w *writer) allocateBuffer(size int) {
 }
 
 func (w *writer) start() {
-	if !w.running.CompareAndSwap(false, true) {
+	if w.running.CompareAndSwap(false, true) {
 		w.allocateBuffer(32)
 		go w.run()
 	}
 }
 
 func (w *writer) stop() {
-	if ubc := w.ubc.Load(); ubc != nil {
-		if w.ubc.CompareAndSwap(ubc, nil) {
-			w.running.Store(false)
-			w.cancel()
-		}
+	if w.running.CompareAndSwap(true, false) {
+		w.cancel()
+		w.ubc.Store(nil)
 	}
 }
 

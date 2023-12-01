@@ -1,7 +1,8 @@
 package gortsplib
 
 import (
-	"sync"
+	"context"
+	"sync/atomic"
 
 	"github.com/smallnest/chanx"
 )
@@ -9,45 +10,47 @@ import (
 // this struct contains a queue that allows to detach the routine that is reading a stream
 // from the routine that is writing a stream.
 type writer struct {
-	running bool
-	closed  bool
-	mu      sync.Mutex
-	ubc     *chanx.UnboundedChan[func()]
+	running atomic.Bool
+	ubc     atomic.Pointer[chanx.UnboundedChan[func()]]
+	ctx     context.Context
+	cancel  context.CancelFunc
 }
 
 func (w *writer) allocateBuffer(size int) {
-	w.ubc = chanx.NewUnboundedChan[func()](size)
+	if w.ubc.Load() == nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		ubc := chanx.NewUnboundedChan[func()](ctx, size)
+		_ = cancel
+		if w.ubc.CompareAndSwap(nil, ubc) {
+			w.ctx, w.cancel = ctx, cancel
+		}
+	}
 }
 
 func (w *writer) start() {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if !w.running {
-		w.running = true
+	if !w.running.CompareAndSwap(false, true) {
+		w.allocateBuffer(32)
 		go w.run()
 	}
 }
 
 func (w *writer) stop() {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if !w.closed {
-		w.running = false
-		w.closed = true
-		close(w.ubc.In)
+	if ubc := w.ubc.Load(); ubc != nil {
+		if w.ubc.CompareAndSwap(ubc, nil) {
+			w.running.Store(false)
+			w.cancel()
+		}
 	}
 }
 
 func (w *writer) run() {
-	for fn := range w.ubc.Out {
+	for fn := range w.ubc.Load().Out {
 		fn()
 	}
 }
 
 func (w *writer) queue(cb func()) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if !w.closed {
-		w.ubc.In <- cb
+	if ubc := w.ubc.Load(); ubc != nil {
+		ubc.In <- cb
 	}
 }

@@ -1,6 +1,8 @@
 package gortsplib
 
 import (
+	"io"
+
 	"github.com/aler9/gortsplib/v2/pkg/base"
 	"github.com/aler9/gortsplib/v2/pkg/media"
 )
@@ -17,6 +19,10 @@ type ServerHandlerOnConnOpenCtx struct {
 type ServerHandlerOnConnOpen interface {
 	// called when a connection is opened.
 	OnConnOpen(*ServerHandlerOnConnOpenCtx)
+}
+
+type ServerHandlerOnConnOpenEx interface {
+	OnConnOpenEx(*ServerHandlerOnConnOpenCtx) (io.Writer, io.Writer)
 }
 
 // ServerHandlerOnConnCloseCtx is the context of OnConnClose.

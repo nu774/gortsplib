@@ -12,6 +12,28 @@ const (
 	readBufferSize = 4096
 )
 
+type RWLogger struct {
+	rw      io.ReadWriter
+	rlogger io.Writer
+	wlogger io.Writer
+}
+
+func (cw *RWLogger) Read(p []byte) (int, error) {
+	n, err := cw.rw.Read(p)
+	if n > 0 && cw.rlogger != nil {
+		cw.rlogger.Write(p[:n])
+	}
+	return n, err
+}
+
+func (cw *RWLogger) Write(p []byte) (int, error) {
+	n, err := cw.rw.Write(p)
+	if n > 0 && cw.wlogger != nil {
+		cw.wlogger.Write(p[:n])
+	}
+	return n, err
+}
+
 // Conn is a RTSP connection.
 type Conn struct {
 	w   io.Writer
@@ -26,6 +48,18 @@ func NewConn(rw io.ReadWriter) *Conn {
 	return &Conn{
 		w:  rw,
 		br: bufio.NewReaderSize(rw, readBufferSize),
+	}
+}
+
+func NewConnWithLogger(rw io.ReadWriter, rlogger io.Writer, wlogger io.Writer) *Conn {
+	rwl := &RWLogger{
+		rw:      rw,
+		rlogger: rlogger,
+		wlogger: wlogger,
+	}
+	return &Conn{
+		w:  rwl,
+		br: bufio.NewReaderSize(rwl, readBufferSize),
 	}
 }
 

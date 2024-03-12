@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"io"
 	"net"
 	gourl "net/url"
 	"strings"
@@ -153,8 +154,15 @@ func (sc *ServerConn) run() {
 			Conn: sc,
 		})
 	}
+	var rlogger io.Writer
+	var wlogger io.Writer
+	if h, ok := sc.s.Handler.(ServerHandlerOnConnOpenEx); ok {
+		rlogger, wlogger = h.OnConnOpenEx(&ServerHandlerOnConnOpenCtx{
+			Conn: sc,
+		})
+	}
 
-	sc.conn = conn.NewConn(sc.bc)
+	sc.conn = conn.NewConnWithLogger(sc.bc, rlogger, wlogger)
 
 	readRequest := make(chan readReq)
 	readErr := make(chan error)

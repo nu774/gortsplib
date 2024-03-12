@@ -14,14 +14,14 @@ const (
 
 type RWLogger struct {
 	rw      io.ReadWriter
-	rlogger io.Writer
-	wlogger io.Writer
+	rlogger func([]byte, int, error)
+	wlogger func([]byte, int, error)
 }
 
 func (cw *RWLogger) Read(p []byte) (int, error) {
 	n, err := cw.rw.Read(p)
 	if n > 0 && cw.rlogger != nil {
-		cw.rlogger.Write(p[:n])
+		cw.rlogger(p, n, err)
 	}
 	return n, err
 }
@@ -29,7 +29,7 @@ func (cw *RWLogger) Read(p []byte) (int, error) {
 func (cw *RWLogger) Write(p []byte) (int, error) {
 	n, err := cw.rw.Write(p)
 	if n > 0 && cw.wlogger != nil {
-		cw.wlogger.Write(p[:n])
+		cw.wlogger(p, n, err)
 	}
 	return n, err
 }
@@ -51,7 +51,7 @@ func NewConn(rw io.ReadWriter) *Conn {
 	}
 }
 
-func NewConnWithLogger(rw io.ReadWriter, rlogger io.Writer, wlogger io.Writer) *Conn {
+func NewConnWithLogger(rw io.ReadWriter, rlogger func([]byte, int, error), wlogger func([]byte, int, error)) *Conn {
 	rwl := &RWLogger{
 		rw:      rw,
 		rlogger: rlogger,

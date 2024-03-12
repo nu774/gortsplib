@@ -1,8 +1,6 @@
 package gortsplib
 
 import (
-	"io"
-
 	"github.com/aler9/gortsplib/v2/pkg/base"
 	"github.com/aler9/gortsplib/v2/pkg/media"
 )
@@ -22,7 +20,7 @@ type ServerHandlerOnConnOpen interface {
 }
 
 type ServerHandlerOnConnOpenEx interface {
-	OnConnOpenEx(*ServerHandlerOnConnOpenCtx) (io.Writer, io.Writer)
+	OnConnOpenEx(*ServerHandlerOnConnOpenCtx) (func([]byte, int, error), func([]byte, int, error))
 }
 
 // ServerHandlerOnConnCloseCtx is the context of OnConnClose.

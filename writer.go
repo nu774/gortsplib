@@ -43,6 +43,9 @@ func (w *writer) stop() {
 
 func (w *writer) run() {
 	for fn := range w.ubc.Load().Out {
+		if !w.running.Load() {
+			break
+		}
 		fn()
 	}
 }

@@ -142,6 +142,7 @@ func (sm *serverSessionMedia) writePacketRTP(payload []byte) {
 		if err := sm.writePacketRTPInQueue(payload); err != nil {
 			onWarning(sm.ss, err)
 			sm.ss.tcpConn.nconn.Close()
+			sm.ss.writer.stop()
 		}
 
 	})
@@ -152,6 +153,7 @@ func (sm *serverSessionMedia) writePacketRTCP(payload []byte) {
 		if err := sm.writePacketRTCPInQueue(payload); err != nil {
 			onWarning(sm.ss, err)
 			sm.ss.tcpConn.nconn.Close()
+			sm.ss.writer.stop()
 		}
 	})
 }

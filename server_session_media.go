@@ -25,8 +25,8 @@ type serverSessionMedia struct {
 	tcpRTCPFrame           *base.InterleavedFrame
 	tcpBuffer              []byte
 	formats                map[uint8]*serverSessionFormat // record only
-	writePacketRTPInQueue  func([]byte)
-	writePacketRTCPInQueue func([]byte)
+	writePacketRTPInQueue  func([]byte) error
+	writePacketRTCPInQueue func([]byte) error
 	readRTP                func([]byte) error
 	readRTCP               func([]byte) error
 	onPacketRTCP           func(rtcp.Packet)
@@ -113,39 +113,46 @@ func (sm *serverSessionMedia) stop() {
 	}
 }
 
-func (sm *serverSessionMedia) writePacketRTPInQueueUDP(payload []byte) {
+func (sm *serverSessionMedia) writePacketRTPInQueueUDP(payload []byte) error {
 	atomic.AddUint64(sm.ss.bytesSent, uint64(len(payload)))
-	sm.ss.s.udpRTPListener.write(payload, sm.udpRTPWriteAddr)
+	return sm.ss.s.udpRTPListener.write(payload, sm.udpRTPWriteAddr)
 }
 
-func (sm *serverSessionMedia) writePacketRTCPInQueueUDP(payload []byte) {
+func (sm *serverSessionMedia) writePacketRTCPInQueueUDP(payload []byte) error {
 	atomic.AddUint64(sm.ss.bytesSent, uint64(len(payload)))
-	sm.ss.s.udpRTCPListener.write(payload, sm.udpRTCPWriteAddr)
+	return sm.ss.s.udpRTCPListener.write(payload, sm.udpRTCPWriteAddr)
 }
 
-func (sm *serverSessionMedia) writePacketRTPInQueueTCP(payload []byte) {
+func (sm *serverSessionMedia) writePacketRTPInQueueTCP(payload []byte) error {
 	atomic.AddUint64(sm.ss.bytesSent, uint64(len(payload)))
 	sm.tcpRTPFrame.Payload = payload
 	sm.ss.tcpConn.nconn.SetWriteDeadline(time.Now().Add(sm.ss.s.WriteTimeout))
-	sm.ss.tcpConn.conn.WriteInterleavedFrame(sm.tcpRTPFrame, sm.tcpBuffer)
+	return sm.ss.tcpConn.conn.WriteInterleavedFrame(sm.tcpRTPFrame, sm.tcpBuffer)
 }
 
-func (sm *serverSessionMedia) writePacketRTCPInQueueTCP(payload []byte) {
+func (sm *serverSessionMedia) writePacketRTCPInQueueTCP(payload []byte) error {
 	atomic.AddUint64(sm.ss.bytesSent, uint64(len(payload)))
 	sm.tcpRTCPFrame.Payload = payload
 	sm.ss.tcpConn.nconn.SetWriteDeadline(time.Now().Add(sm.ss.s.WriteTimeout))
-	sm.ss.tcpConn.conn.WriteInterleavedFrame(sm.tcpRTCPFrame, sm.tcpBuffer)
+	return sm.ss.tcpConn.conn.WriteInterleavedFrame(sm.tcpRTCPFrame, sm.tcpBuffer)
 }
 
 func (sm *serverSessionMedia) writePacketRTP(payload []byte) {
 	sm.ss.writer.queue(func() {
-		sm.writePacketRTPInQueue(payload)
+		if err := sm.writePacketRTPInQueue(payload); err != nil {
+			onWarning(sm.ss, err)
+			sm.ss.tcpConn.nconn.Close()
+		}
+
 	})
 }
 
 func (sm *serverSessionMedia) writePacketRTCP(payload []byte) {
 	sm.ss.writer.queue(func() {
-		sm.writePacketRTCPInQueue(payload)
+		if err := sm.writePacketRTCPInQueue(payload); err != nil {
+			onWarning(sm.ss, err)
+			sm.ss.tcpConn.nconn.Close()
+		}
 	})
 }
 

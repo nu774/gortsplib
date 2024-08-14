@@ -37,12 +37,20 @@ func (w *writer) start() {
 func (w *writer) stop() {
 	if w.running.CompareAndSwap(true, false) {
 		w.cancel()
-		w.ubc.Store(nil)
+		if ubc := w.ubc.Load(); ubc != nil {
+			close(ubc.In)
+			w.ubc.Store(nil)
+		}
 	}
 }
 
 func (w *writer) run() {
-	for fn := range w.ubc.Load().Out {
+	p := w.ubc.Load()
+	if p == nil {
+		return
+	}
+	ch := p.Out
+	for fn := range ch {
 		if !w.running.Load() {
 			break
 		}

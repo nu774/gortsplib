@@ -63,3 +63,11 @@ func (w *writer) queue(cb func()) {
 		ubc.In <- cb
 	}
 }
+
+func (w *writer) count() int {
+	p := w.ubc.Load()
+	if p == nil {
+		return 0
+	}
+	return p.Len()
+}

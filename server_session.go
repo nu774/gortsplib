@@ -263,6 +263,10 @@ func (ss *ServerSession) UserData() interface{} {
 	return ss.userData
 }
 
+func (ss *ServerSession) WriterQueueCount() int {
+	return ss.writer.count()
+}
+
 func (ss *ServerSession) checkState(allowed map[ServerSessionState]struct{}) error {
 	if _, ok := allowed[ss.state]; ok {
 		return nil
